@@ -1,0 +1,5 @@
+body {
+  background-color: #f3f6fd;
+}
+
+@import "bootstrap/dist/css/bootstrap.min.css";
