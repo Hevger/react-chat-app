@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { FormGroup } from "react-bootstrap";
 import { Form, Button, Card, Alert } from "react-bootstrap";
-import { auth } from "../../firebase";
+import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
+import { auth, firestore } from "../../firebase";
 import validator from "validator";
 import isEmpty from "../../validation/isEmpty";
 
 export default function Signup() {
   const [userInfo, setUserInfo] = useState({
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
   });
@@ -30,6 +32,10 @@ export default function Signup() {
         ? ""
         : "Password must be 8 characters",
 
+      validPhone: validator.isMobilePhone(userInfo.phone)
+        ? ""
+        : "Phone number is not valid",
+
       validConfirmPassword: validator.isLength(userInfo.confirmPassword, {
         min: 8,
       })
@@ -48,6 +54,7 @@ export default function Signup() {
     // Check if there is no errors
     if (
       isEmpty(signupErrors.validEmail) &&
+      isEmpty(signupErrors.validPhone) &&
       isEmpty(signupErrors.validPassword) &&
       isEmpty(signupErrors.validConfirmPassword) &&
       isEmpty(signupErrors.validPasswordMatch)
@@ -56,14 +63,23 @@ export default function Signup() {
         .createUserWithEmailAndPassword(userInfo.email, userInfo.password)
         .then((authData) => {
           // User created
-          console.log("User created successfully with payload-", authData);
-          setUserInfo({ email: "", password: "", confirmPassword: "" });
+          setUserInfo({
+            email: "",
+            phone: "",
+            password: "",
+            confirmPassword: "",
+          });
+
+          firestore.collection("usersCollection").add({
+            uid: authData.user.uid,
+            phone: userInfo.phone,
+          });
+
           setErrors({
             signupSucces: "Your account has been created successfully",
           });
         })
         .catch((_error) => {
-          console.log("Login Failed!", _error);
           setErrors({ signupFailError: _error.message });
         });
     }
@@ -114,7 +130,6 @@ export default function Signup() {
             name="email"
             value={userInfo.email}
             type="email"
-            placeholder="Enter email"
             onChange={handleChange}
             isInvalid={errors.validEmail ? true : false}
           />
@@ -124,12 +139,25 @@ export default function Signup() {
         </FormGroup>
 
         <FormGroup>
+          <Form.Label>Phone</Form.Label>
+          <Form.Control
+            name="phone"
+            value={userInfo.phone}
+            type="number"
+            onChange={handleChange}
+            isInvalid={errors.validPhone ? true : false}
+          />
+          <Form.Control.Feedback type="invalid">
+            {errors.validPhone}
+          </Form.Control.Feedback>
+        </FormGroup>
+
+        <FormGroup>
           <Form.Label>Password</Form.Label>
           <Form.Control
             name="password"
             value={userInfo.password}
             type="password"
-            placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;"
             onChange={handleChange}
             isInvalid={errors.validPassword ? true : false}
           />
@@ -144,7 +172,6 @@ export default function Signup() {
             name="confirmPassword"
             value={userInfo.confirmPassword}
             type="password"
-            placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;"
             onChange={handleChange}
             isInvalid={
               errors.validConfirmPassword
@@ -164,7 +191,7 @@ export default function Signup() {
         </FormGroup>
 
         <p style={{ marginTop: "-10px", textAlign: "right", fontSize: "12px" }}>
-          Already have an account? login in <a href="#">here</a>
+          Already have an account? login in <Link to="/login">here</Link>
         </p>
         <div className="col text-center">
           <Button
